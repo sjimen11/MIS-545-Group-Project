@@ -88,15 +88,15 @@ class CarsComScraper:
             # Dealer info
             dealer_elem = listing_element.find('div', class_='dealer-name')
             if dealer_elem:
-                car_data['dealer_name'] = dealer_elem.get_text(strip=True)
-                car_data['is_dealer'] = 1
+                car_data['dealerName'] = dealer_elem.get_text(strip=True)
+                car_data['isDealer'] = 1
             else:
-                car_data['is_dealer'] = 0
+                car_data['isDealer'] = 0
             
             # Rating
             rating_elem = listing_element.find('span', class_='sds-rating__count')
             if rating_elem:
-                car_data['dealer_rating'] = rating_elem.get_text(strip=True)
+                car_data['dealerRating'] = rating_elem.get_text(strip=True)
             
             return car_data
             
@@ -254,8 +254,8 @@ class CarsComScraper:
                     
                     # Add location info to each car
                     for car in cars:
-                        car['scrape_location'] = city
-                        car['scrape_zip'] = zip_code
+                        car['scrapeLocation'] = city
+                        car['scrapeZip'] = zip_code
                     
                     location_cars.extend(cars)
                     print(f"    Found {len(cars)} cars on page {page}")
@@ -289,20 +289,40 @@ class CarsComScraper:
         # High-priced vehicle (above median)
         if 'price' in df.columns:
             median_price = df['price'].median()
-            df['high_priced'] = (df['price'] > median_price).astype(int)
+            df['highPriced'] = (df['price'] > median_price).astype(int)
         
         # Low mileage (less than 50k miles)
         if 'mileage' in df.columns:
-            df['low_mileage'] = (df['mileage'] < 50000).astype(int)
+            df['lowMileage'] = (df['mileage'] < 50000).astype(int)
         
         # Luxury brand
         luxury_brands = ['BMW', 'Mercedes-Benz', 'Audi', 'Lexus', 'Infiniti', 'Acura']
         if 'make' in df.columns:
-            df['is_luxury'] = df['make'].isin(luxury_brands).astype(int)
+            df['isLuxury'] = df['make'].isin(luxury_brands).astype(int)
         
         # Recent model (2020 or newer)
         if 'year' in df.columns:
-            df['is_recent'] = (df['year'] >= 2020).astype(int)
+            df['isRecent'] = (df['year'] >= 2020).astype(int)
+        
+        return df
+    
+    def rename_columns_to_camel_case(self, df):
+        """Rename columns to camelCase for consistency"""
+        column_mapping = {
+            'dealer_name': 'dealerName',
+            'is_dealer': 'isDealer',
+            'dealer_rating': 'dealerRating',
+            'scrape_location': 'scrapeLocation',
+            'scrape_zip': 'scrapeZip',
+            'high_priced': 'highPriced',
+            'low_mileage': 'lowMileage',
+            'is_luxury': 'isLuxury',
+            'is_recent': 'isRecent'
+        }
+        
+        # Only rename columns that exist in the DataFrame
+        existing_columns = {old: new for old, new in column_mapping.items() if old in df.columns}
+        df = df.rename(columns=existing_columns)
         
         return df
 
@@ -343,9 +363,12 @@ def main():
     df = df.dropna(subset=['price', 'mileage'])  # Remove rows with missing key data
     df = scraper.create_binary_variables(df)
     
+    # Rename columns to camelCase
+    df = scraper.rename_columns_to_camel_case(df)
+    
     # Save to CSV with timestamp
     timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-    filename = f'used_cars_dataset_{timestamp}.csv'
+    filename = f'usedCarDataSet{timestamp}.csv'
     df.to_csv(filename, index=False)
     print(f"Scraped {len(df)} cars and saved to {filename}")
     
@@ -356,10 +379,10 @@ def main():
     if len(df) > 0:
         print(f"Price range: ${df['price'].min():,} - ${df['price'].max():,}")
         print(f"Year range: {df['year'].min()} - {df['year'].max()}")
-        if 'scrape_location' in df.columns:
-            print(f"Locations covered: {df['scrape_location'].nunique()}")
+        if 'scrapeLocation' in df.columns:
+            print(f"Locations covered: {df['scrapeLocation'].nunique()}")
             print(f"Top 5 locations by count:")
-            print(df['scrape_location'].value_counts().head())
+            print(df['scrapeLocation'].value_counts().head())
 
 if __name__ == "__main__":
     main()
