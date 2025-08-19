@@ -10,9 +10,7 @@ library(rpart.plot)
 
 
 # Set cwd
-setwd(paste0("~/Library/CloudStorage/OneDrive-Personal/",
-             "UofA/3.Summer2025/MIS-545/",
-             "groupProject/groupProject"))
+setwd(paste0("SET_PATH_HERE"))
 # Data types
 # Character, factor, numeric, integer, logical, date
 # Load data ../scraper/usedCarDataSet*.csv
