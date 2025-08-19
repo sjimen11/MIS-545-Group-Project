@@ -1,6 +1,13 @@
 # Install and load packages 
 # install.packages("tidyverse")
-library("tidyverse")
+# install.packages("rpart")
+# install.packages("rpart.plot")
+
+# load required libraries
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+
 
 # Set cwd
 setwd(paste0("SET_PATH_HERE"))
@@ -84,6 +91,21 @@ print(avgPricePerMileByMake)
 str(avgPricePerMileByMake)
 summary(avgPricePerMileByMake)
 
+# Set seed for splitting data 
+randomSeed <- sample(1:999, 1)
+set.seed(randomSeed)
+
+# Create sample set
+sampleSet <- sample(nrow(usedCars2),
+                    round(nrow(usedCars2) * 0.75),
+                    replace = FALSE)
+
+# Split data into 75% training data
+usedCarTraining <- usedCars2[sampleSet, ]
+
+# Split data into 25% testing data
+usedCarTesting <- usedCars2[-sampleSet, ]
+
 # Logistic regression
 
 # K-nearest neighbors
@@ -91,3 +113,32 @@ summary(avgPricePerMileByMake)
 # Naive Bayes
 
 # Decision tree
+# Use only useful predictors
+usedCarDecisionTreeModel <- rpart(highPriced ~ year + make + mileage ,
+                                  data = usedCarTesting,
+                                  method = "class",
+                                  cp = 0.05)
+
+# Plot the decision tree model
+rpart.plot(usedCarDecisionTreeModel)
+
+# Predict FarmOwnership for the testing data
+usedCarPredictions <- predict(usedCarDecisionTreeModel,
+                               usedCarTesting,
+                               type = "class")
+# Display riceFarmPredictions
+print(usedCarPredictions)
+
+# Create a confusion matrix
+usedCarConfusionMatrix <- table(usedCarTesting$isLuxury,
+                                usedCarPredictions)
+# Display the confusion matrix
+print(usedCarConfusionMatrix)
+
+# Calculate the accuracy of the model
+predictiveAccuracy <- sum(diag(usedCarConfusionMatrix)) /
+  nrow(usedCarTesting)
+
+# Display the predictive accuracy
+print(predictiveAccuracy)
+
