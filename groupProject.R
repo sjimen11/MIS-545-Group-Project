@@ -107,6 +107,36 @@ usedCarTraining <- usedCars2[sampleSet, ]
 usedCarTesting <- usedCars2[-sampleSet, ]
 
 # Logistic regression
+#Generating Logistic regression model
+usedCarsLRModel <- glm(data = usedCarTraining , 
+                     family = binomial , 
+                     formula = highPriced ~ year + mileage + 
+                       isLuxury + isRecent)
+#Displaying the model
+summary(usedCarsLRModel)
+
+#Predict classes for each record in the testing dataset
+usedCarsLRPrediction <- predict(usedCarsLRModel,
+                            usedCarTesting,
+                          type = "response"
+)
+
+#Display the predictions from usedCarsprediction on console
+print(usedCarsLRPrediction)
+
+#Evaluate the model by forming a confusion matrix
+usedCarsLRConfusionMatrix <- table(usedCarTesting$highPriced,
+                                 usedCarsLRPrediction)
+
+#Display the confusion matrix on the console
+print(usedCarsLRConfusionMatrix)
+
+#Calculate the model predicitive accuracy
+LRpredictiveAccuracy <- sum(diag(usedCarsLRConfusionMatrix)) /
+  nrow(usedCarTesting)
+
+#print the predictiveAccuracy
+print(LRpredictiveAccuracy)
 
 # K-nearest neighbors
 
