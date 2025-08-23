@@ -2,15 +2,28 @@
 # install.packages("tidyverse")
 # install.packages("rpart")
 # install.packages("rpart.plot")
+# install.packages("class")
+# install.packages("corrplot")
+# install.packages("olsrr")
+# install.packages("ggcorrplot")
+# install.packages("e1071") 
+# install.packages("caret")
 
 # load required libraries
 library(tidyverse)
 library(rpart)
 library(rpart.plot)
-
+library(class)
+library(corrplot)
+library(olsrr)
+library(ggcorrplot)
+library(e1071)
+library(caret)
 
 # Set cwd
-setwd(paste0("SET_PATH_HERE"))
+setwd(paste0("~/Library/CloudStorage/OneDrive-Personal/",
+             "UofA/3.Summer2025/MIS-545/",
+             "groupProject/groupProject"))
 # Data types
 # Character, factor, numeric, integer, logical, date
 # Load data ../scraper/usedCarDataSet*.csv
@@ -47,12 +60,46 @@ displayAllHistograms(usedCars)
 usedCars <- usedCars %>%
   filter(!is.na(pricePerMile) & !is.na(carAge))
 
+# Correlation plot of numeric variables
+numericVars <- usedCars %>%
+  select(price, mileage, carAge, pricePerMile)
+
+corMatrix <- cor(numericVars, use = "complete.obs")
+
+ggcorrplot(corMatrix, 
+           hc.order = TRUE, 
+           type = "lower", 
+           lab = TRUE, 
+           lab_size = 3, 
+           method="circle", 
+           colors = c("red", "white", "blue"), 
+           title="Correlation Plot of Numeric Variables", 
+           ggtheme=theme_minimal())
+
 # Noramalization
 usedCars2 <- usedCars %>%
   mutate(logPrice = log(price),
          logMileage = log(mileage))
 
 displayAllHistograms(usedCars2)
+
+# Scatterplot with log-transformed variables
+ggplot(usedCars2, aes(x = logMileage, y = logPrice, color = isLuxury)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", color = "black") +
+  theme_minimal() +
+  labs(title = "Scatterplot: Log(Price) vs Log(Mileage) by Luxury",
+       x = "Log(Mileage)",
+       y = "Log(Price)")
+
+# Boxplot: Price by Luxury
+ggplot(usedCars2, aes(x = as.factor(isLuxury), y = price, fill = as.factor(isLuxury))) +
+  geom_boxplot() +
+  scale_y_continuous(labels = scales::dollar) +
+  theme_minimal() +
+  labs(title = "Boxplot: Price by Luxury vs Non-Luxury",
+       x = "Is Luxury",
+       y = "Price")
 
 # Queries
 # Average price by vehicle make
@@ -67,6 +114,19 @@ print(avgPriceByMake)
 str(avgPriceByMake)
 summary(avgPriceByMake)
 
+# Top 10 makes by average price
+AvgPriceByMake_Top10 <- avgPriceByMake %>%
+  slice_max(order_by = avgPrice, n = 10)
+
+ggplot(AvgPriceByMake_Top10,
+       aes(x = fct_reorder(make, avgPrice), y = avgPrice)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(title = "Average Price by Make (Top 10)",
+       x = "Make", y = "Average Price ($)") +
+  theme_minimal()
+
 # Average mileage by vehicle make
 avgMileageByMake <- usedCars %>%
   group_by(make) %>%
@@ -79,6 +139,19 @@ print(avgMileageByMake)
 str(avgMileageByMake)
 summary(avgMileageByMake)
 
+# Top 10 makes by average mileage
+AvgMileageByMake_Top10 <- avgMileageByMake %>%
+  slice_max(order_by = avgMileage, n = 10)
+
+ggplot(AvgMileageByMake_Top10,
+       aes(x = fct_reorder(make, avgMileage), y = avgMileage)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(title = "Average Mileage by Make (Top 10)",
+       x = "Make", y = "Average Mileage") +
+  theme_minimal()
+
 # Average price per mile by vehicle make
 avgPricePerMileByMake <- usedCars %>%
   group_by(make) %>%
@@ -90,6 +163,19 @@ print("Average Mileage by Vehicle Make")
 print(avgPricePerMileByMake)
 str(avgPricePerMileByMake)
 summary(avgPricePerMileByMake)
+
+# Top 10 makes by average price per mile
+AvgPricePerMileByMake_Top10 <- avgPricePerMileByMake %>%
+  slice_max(order_by = avgPricePerMile, n = 10)
+
+ggplot(AvgPricePerMileByMake_Top10,
+       aes(x = fct_reorder(make, avgPricePerMile), y = avgPricePerMile)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = function(x) scales::dollar(x)) +
+  labs(title = "Average Price per Mile by Make (Top 10)",
+       x = "Make", y = "Average Price per Mile ($/mile)") +
+  theme_minimal()
 
 # Set seed for splitting data 
 randomSeed <- sample(1:999, 1)
@@ -185,6 +271,30 @@ knn_acc <- mean(knn_pred == y_test)
 cat("knn (k =", k_value, ") accuracy:", knn_acc, "\n")
 
 # Naive Bayes
+# Convert target to factor (classification) 
+usedCars$highPriced <- as.factor(usedCars$highPriced) 
+
+# Select relevant predictors 
+carData3 <- usedCars %>% select(highPriced, year, mileage, make, isLuxury, isRecent) 
+
+# Split into training (75%) and testing (25%)  
+trainIndex <- createDataPartition(carData3$highPriced, p = 0.75, list = FALSE) 
+
+carTrain <- carData3[trainIndex, ] 
+carTest <- carData3[-trainIndex, ] 
+
+# Train Naive Bayes model 
+carNB <- naiveBayes(highPriced ~ year + mileage + make + isLuxury + isRecent, 
+                    data = carTrain) 
+
+# View model details 
+print(carNB) 
+
+# Predict on test set 
+carPred <- predict(carNB, carTest) 
+
+# Confusion matrix for accuracy
+confusionMatrix(carPred, carTest$highPriced)
 
 # Decision tree
 # Use only useful predictors
@@ -196,11 +306,11 @@ usedCarDecisionTreeModel <- rpart(highPriced ~ year + make + mileage ,
 # Plot the decision tree model
 rpart.plot(usedCarDecisionTreeModel)
 
-# Predict FarmOwnership for the testing data
+# Predict highPriced for the testing data
 usedCarPredictions <- predict(usedCarDecisionTreeModel,
                                usedCarTesting,
                                type = "class")
-# Display riceFarmPredictions
+# Display usedCarPredictions
 print(usedCarPredictions)
 
 # Create a confusion matrix
@@ -215,4 +325,5 @@ predictiveAccuracy <- sum(diag(usedCarConfusionMatrix)) /
 
 # Display the predictive accuracy
 print(predictiveAccuracy)
+
 
