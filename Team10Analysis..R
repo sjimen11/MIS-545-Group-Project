@@ -26,7 +26,7 @@ setwd(paste0("SET_PATH_HERE"))
 # Data types
 # Character, factor, numeric, integer, logical, date
 # Load data ../scraper/usedCarDataSet*.csv
-usedCars <- read_csv(file="scraper/usedCarDataSet20250811_201429.csv",
+usedCars <- read_csv(file="scraper/Team10BankingDataSet.csv.csv",
                       col_types="nifffflffnllll",
                       col_names=TRUE)
 # Display results
